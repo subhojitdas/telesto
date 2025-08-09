@@ -28,7 +28,7 @@ class FeedForward(nn.Module):
         self.linear1 = nn.Linear(d_model, d_ff)
         self.linear2 = nn.Linear(d_ff, d_model)
         self.dropout = nn.Dropout(dropout)
-        self.activation = nn.ReLU()
+        self.activation = nn.GELU()
 
     def forward(self, x):
         return self.linear2(self.dropout(self.activation(self.linear1(x))))
