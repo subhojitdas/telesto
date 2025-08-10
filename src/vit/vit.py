@@ -32,9 +32,18 @@ class PathEmbedManual(nn.Module):
         self.proj = nn.Linear(in_chans * patch_size * patch_size, embed_dim, bias=True)
 
     def forward(self, x):
+        # (B, C, H, W) => (B, num_patches, embed_dim)
+        # In essence it creates an embedding for each patch.
+        # If you pluck out[0, 0, :] it will give you the embedding for the batch's 1st element, 1st patch
+        # If you pluck out[6, 18, :] it will give you the embedding for the batch's 7th element, 18th patch
+        
         B, C, H, W = x.shape
         p = self.patch_size
-        x.unfold(B, )
+        x = x.unfold(2, p, p).unfold(3, p, p)
+        x = x.permute(0, 2, 3, 1, 4, 5)
+        x = x.view(B, self.num_patches, C * p * p)
+        x = self.proj(x)
+        return x
 
 class VisionTransformer(nn.Module):
     def __init__(
