@@ -36,7 +36,7 @@ class PathEmbedManual(nn.Module):
         # In essence it creates an embedding for each patch.
         # If you pluck out[0, 0, :] it will give you the embedding for the batch's 1st element, 1st patch
         # If you pluck out[6, 18, :] it will give you the embedding for the batch's 7th element, 18th patch
-        
+
         B, C, H, W = x.shape
         p = self.patch_size
         x = x.unfold(2, p, p).unfold(3, p, p)
@@ -53,14 +53,27 @@ class VisionTransformer(nn.Module):
         in_chans=3,
         embed_dim=768,
     ):
+        """"""
         super().__init__()
 
         self.patch_embed = PatchEmbed(img_size=img_size, patch_size=patch_size,
                                       in_chans=in_chans, embed_dim=embed_dim)
+        #####
+        # The idea of CLS token is token from BERT. This [CLS] token is learnable vector which
+        # tries to learn the global representation of the image. For classification we don't need
+        # a prediction per patch, we need a prediction per image. So this [CLS] token
+        # wants to learn the image level representation through Transformer attention mechanism
+        # ([CLS] attending to all the patches and patches are attending back to the [CLS] token )
+        # In case of Avg pooling, averaging treats all patches equally. But some patches matter more
+        # [CLS] lets the model learn how to weight and combine information across patches, not just average blindly.
+        #####
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
 
     def forward(self, x):
         B = x.shape[0]
         x = self.patch_embed(x)
+        cls_tokens = self.cls_token.expand(B, -1, -1) # (B, 1, emb_dim)
+        x = torch.cat((cls_tokens, x), dim=1) # (B, P + 1, emb_dim)
 
         # output
         out = x
