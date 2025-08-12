@@ -55,9 +55,9 @@ class VisionTransformer(nn.Module):
     ):
         """"""
         super().__init__()
-
         self.patch_embed = PatchEmbed(img_size=img_size, patch_size=patch_size,
                                       in_chans=in_chans, embed_dim=embed_dim)
+        num_patches = self.patch_embed.num_patches
         #####
         # The idea of CLS token is token from BERT. This [CLS] token is learnable vector which
         # tries to learn the global representation of the image. For classification we don't need
@@ -68,12 +68,21 @@ class VisionTransformer(nn.Module):
         # [CLS] lets the model learn how to weight and combine information across patches, not just average blindly.
         #####
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
+        #####
+        # A transformer’s self-attention does not know the order of its input tokens
+        # If you shuffle the token sequence, self-attention treats it the same way,
+        # because attention only looks at relationships between tokens, not positions.
+        # That is the reason we need this learnable parameter to embed the position information of the patches
+        #####
+        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim))
+
 
     def forward(self, x):
         B = x.shape[0]
         x = self.patch_embed(x)
         cls_tokens = self.cls_token.expand(B, -1, -1) # (B, 1, emb_dim)
         x = torch.cat((cls_tokens, x), dim=1) # (B, P + 1, emb_dim)
+        x = x + self.pos_embed
 
         # output
         out = x
