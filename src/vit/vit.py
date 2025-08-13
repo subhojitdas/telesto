@@ -47,11 +47,12 @@ class PathEmbedManual(nn.Module):
 
 class VisionTransformer(nn.Module):
     def __init__(
-        self,
-        img_size=224,
-        patch_size=16,
-        in_chans=3,
-        embed_dim=768,
+            self,
+            img_size=224,
+            patch_size=16,
+            in_chans=3,
+            embed_dim=768,
+            drop_rate=0.1,
     ):
         """"""
         super().__init__()
@@ -76,6 +77,8 @@ class VisionTransformer(nn.Module):
         #####
         self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim))
 
+        self.pos_drop = nn.Dropout(p=drop_rate)
+
 
     def forward(self, x):
         B = x.shape[0]
@@ -83,6 +86,7 @@ class VisionTransformer(nn.Module):
         cls_tokens = self.cls_token.expand(B, -1, -1) # (B, 1, emb_dim)
         x = torch.cat((cls_tokens, x), dim=1) # (B, P + 1, emb_dim)
         x = x + self.pos_embed
+        x = self.pos_drop(x)
 
         # output
         out = x
