@@ -36,3 +36,28 @@ class MultiHeadSelfAttention(nn.Module):
         out = self.proj(out)
         out = self.proj_drop(out)
         return out
+
+
+class MLP(nn.Module):
+    def __init__(
+            self,
+            fan_in,
+            fan_out=None,
+            hidden_dim=None,
+            dropout=0.1,
+    ):
+        super().__init__()
+        fan_out = fan_out or fan_in
+        hidden_dim = hidden_dim or fan_in * 4
+        self.fc1 = nn.Linear(fan_in, hidden_dim)
+        self.act = nn.GELU()
+        self.fc2 = nn.Linear(hidden_dim, fan_out)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.act(x)
+        x = self.dropout(x)
+        x = self.fc2(x)
+        x = self.dropout(x)
+        return x
