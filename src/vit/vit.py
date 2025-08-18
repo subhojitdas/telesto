@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from typing import Optional
 
 from src.vit.encoder_block import TransformerEncoder
+from src.vit.vit_encoder import TransformerEncoderBlock
 
 
 class PatchEmbed(nn.Module):
@@ -53,6 +54,10 @@ class VisionTransformer(nn.Module):
             in_chans=3,
             embed_dim=768,
             drop_rate=0.1,
+            num_heads=12,
+            mlp_ratio=4.0,
+            attn_drop_rate=0.0,
+            depth=12,
     ):
         """"""
         super().__init__()
@@ -76,8 +81,18 @@ class VisionTransformer(nn.Module):
         # That is the reason we need this learnable parameter to embed the position information of the patches
         #####
         self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim))
-
         self.pos_drop = nn.Dropout(p=drop_rate)
+
+        # Transformer encoder block
+        self.blocks = nn.ModuleList([
+            TransformerEncoderBlock(dim=embed_dim,
+                                    num_heads=num_heads,
+                                    attention_dropout=attn_drop_rate,
+                                    mlp_ratio=mlp_ratio,
+                                    projection_dropout=drop_rate)
+            for _ in range(depth)
+        ])
+        
 
 
     def forward(self, x):
