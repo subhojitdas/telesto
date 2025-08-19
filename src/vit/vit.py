@@ -58,6 +58,7 @@ class VisionTransformer(nn.Module):
             mlp_ratio=4.0,
             attn_drop_rate=0.0,
             depth=12,
+            num_classes=1000,
     ):
         """"""
         super().__init__()
@@ -92,8 +93,9 @@ class VisionTransformer(nn.Module):
                                     projection_dropout=drop_rate)
             for _ in range(depth)
         ])
-        
+        self.norm = nn.LayerNorm(embed_dim, eps=1e-6)
 
+        self.head = nn.Linear(embed_dim, num_classes)
 
     def forward(self, x):
         B = x.shape[0]
@@ -103,8 +105,14 @@ class VisionTransformer(nn.Module):
         x = x + self.pos_embed
         x = self.pos_drop(x)
 
-        # output
-        out = x
+        for blk in self.blocks:
+            x = blk(x)
+        x = self.norm(x)
+
+        # for classification we are plucking the [CLS] dimension , representative of an image
+        cls = x[:, 0] # (B, emb_dim)
+        out = self.head(cls)
+
         return out
 
 
