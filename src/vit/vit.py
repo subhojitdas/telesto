@@ -94,8 +94,22 @@ class VisionTransformer(nn.Module):
             for _ in range(depth)
         ])
         self.norm = nn.LayerNorm(embed_dim, eps=1e-6)
-
         self.head = nn.Linear(embed_dim, num_classes)
+
+        self._init_weights()
+
+    def _init_weights(self):
+        nn.init.trunc_normal_(self.pos_embed, std=0.02)
+        nn.init.trunc_normal_(self.cls_token, std=0.02)
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.LayerNorm):
+                nn.init.ones_(m.weight)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
 
     def forward(self, x):
         B = x.shape[0]
