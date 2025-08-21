@@ -25,7 +25,7 @@ class MultiHeadSelfAttention(nn.Module):
     def forward(self, x):
         B, N, C = x.shape
         qkv = self.qkv(x) # (B, N, 3*C)
-        qkv.reshape(B, N, 3, self.num_heads, self.head_dim)
+        qkv = qkv.reshape(B, N, 3, self.num_heads, self.head_dim)
         qkv = qkv.permute(2, 0, 3, 1, 4) # (3, B, num_heads, N, head_dim)
         q, k, v = qkv[0], qkv[1], qkv[2] # (B, num_heads, N, head_dim) each
         attn = (q @ k.transpose(-2, -1)) * self.scale
