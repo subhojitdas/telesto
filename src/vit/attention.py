@@ -10,15 +10,15 @@ class ScaledDotProductAttention(nn.Module):
         self.dropout = nn.Dropout(dropout) if dropout > 0.0 else nn.Identity()
 
     def forward(self, q, k, v, attn_mask: Optional[torch.Tensor] = None):
-        d_k = q.size(-1)
-        scores = torch.matmul(q, k.transpose(-2, -1)) / (d_k ** 0.5)
+        head_dim = q.size(-1)
+        scores = torch.matmul(q, k.transpose(-2, -1)) / (head_dim ** 0.5)
 
         if attn_mask is not None:
             scores = scores.masked_fill(attn_mask.bool(), float("-1e9"))
 
         attn = F.softmax(scores, dim=-1)
         attn = self.dropout(attn)
-        out = torch.matmul(attn, v)  # (batch, n_heads, seq_len, d_k)
+        out = torch.matmul(attn, v)  # (batch, n_heads, seq_len, head_dimension)
         return out, attn
 
 # Encoder part of the attention
@@ -32,7 +32,7 @@ class MultiHeadAttention(nn.Module):
         assert d_model % num_heads == 0, "d_model must be divisible by num_heads"
         self.d_model = d_model
         self.num_heads = num_heads
-        self.d_k = d_model // num_heads
+        self.head_dim = d_model // num_heads
 
         # In the original transformer they use separate matrices; we can use combined mats for efficiency
         self.w_q = nn.Linear(d_model, d_model, bias=False)
@@ -46,13 +46,13 @@ class MultiHeadAttention(nn.Module):
 
     def _split_heads(self, x):
         batch, seq_len, _ = x.size()
-        x = x.view(batch, seq_len, self.num_heads, self.d_k)
-        return x.permute(0, 2, 1, 3)  # (batch, num_heads, seq_len, d_k)
+        x = x.view(batch, seq_len, self.num_heads, self.head_dim)
+        return x.permute(0, 2, 1, 3)  # (batch, num_heads, seq_len, head_dim)
 
     def _combine_heads(self, x):
-        batch, num_heads, seq_len, d_k = x.size()
-        x = x.permute(0, 2, 1, 3).contiguous()  # (batch, seq_len, num_heads, d_k)
-        return x.view(batch, seq_len, num_heads * d_k)  # (batch, seq_len, d_model)
+        batch, num_heads, seq_len, head_dim = x.size()
+        x = x.permute(0, 2, 1, 3).contiguous()  # (batch, seq_len, num_heads, head_dim)
+        return x.view(batch, seq_len, num_heads * head_dim)  # (batch, seq_len, d_model)
 
     def forward(self, x, mask: Optional[torch.Tensor] = None):
         batch, seq_len, _ = x.size()
@@ -87,7 +87,7 @@ class MultiHeadAttention(nn.Module):
 
 def test_mha():
     torch.manual_seed(0)
-    batch = 2
+    batch = 10
     seq_len = 5
     d_model = 32
     n_heads = 4
